@@ -30,7 +30,7 @@ if (isAdmin()) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo e($pageTitle); ?> | FitFuerInfo</title>
-    <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/css/style.css?v=20261002-2">
+    <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/css/style.css?v=20261002-3">
 </head>
 <body>
     <a class="skip-link" href="#main">Zum Inhalt</a>
