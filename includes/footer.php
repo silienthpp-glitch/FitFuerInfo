@@ -7,6 +7,6 @@
         </div>
     </footer>
 
-    <script src="<?php echo e(BASE_URL); ?>/assets/js/app.js"></script>
+    <script defer src="<?php echo e(BASE_URL); ?>/assets/js/app.js?v=20261002-2"></script>
 </body>
 </html>

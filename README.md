@@ -2,12 +2,12 @@
 
 Lokale Webanwendung zur Verwaltung von Mitarbeitern, Kursprofilen, Räumen und Raumbuchungen.
 
-Das Projekt ist für **XAMPP 5.6.36 / PHP 5.6** geschrieben. Es verwendet nur HTML, CSS, PHP, JavaScript und MySQL/PDO. Es gibt keine Frameworks, kein Composer und keine CDN-Abhängigkeiten.
+Das Projekt entstand für **XAMPP 5.6.36 / PHP 5.6**. Der überarbeitete Stand wurde mit **PHP 8.2.12** geprüft. PHP 5.6 ist nicht mehr unterstützt; für den Betrieb ist eine gepflegte PHP-Version mit aktuellen Sicherheitsupdates erforderlich. Es verwendet nur HTML, CSS, PHP, JavaScript und MySQL/PDO. Es gibt keine Frameworks, kein Composer und keine CDN-Abhängigkeiten.
 
 ## 1. Voraussetzungen
 
 - XAMPP mit Apache und MySQL/MariaDB
-- PHP 5.6 oder kompatibel (z. B. XAMPP 5.6.36)
+- Eine aktuell unterstützte PHP-Version mit PDO MySQL und sicherer Zufallsquelle; Apache 2.4 für die mitgelieferten .htaccess-Regeln
 - Webbrowser
 
 ## 2. XAMPP starten
@@ -50,6 +50,8 @@ Standardwerte für XAMPP:
 
 ## 6. Ersten Administrator anlegen
 
+Die Ersteinrichtung ist standardmäßig gesperrt. Auf dem lokalen Server vorübergehend die Umgebungsvariable `FITFUERINFO_ALLOW_SETUP=1` setzen (bei Apache beispielsweise `SetEnv FITFUERINFO_ALLOW_SETUP 1` in der lokalen Serverkonfiguration). Der Aufruf muss von `127.0.0.1` oder `::1` erfolgen. Danach die Freigabe wieder entfernen. Bereits vorhandene Konten benötigen diesen Schritt nicht.
+
 Im Browser öffnen:
 
 ```text
@@ -60,7 +62,7 @@ http://localhost/fitfuerinfo/setup_admin.php
 
 Das Passwort muss:
 
-- mindestens 4 Zeichen lang sein
+- mindestens 12 Zeichen lang sein und darf höchstens 72 Bytes umfassen
 - mindestens einen Kleinbuchstaben enthalten
 - mindestens eine Zahl enthalten
 
@@ -135,3 +137,19 @@ Der Administrator legt Mitarbeiter **ohne Passwort** an. Stattdessen erzeugt das
 - [Prüfprotokoll vom 02.10.2026](docs/Pruefprotokoll.md)
 
 Projektbearbeitung: Hopkins Colby und Julian Diaconu, RWTH Aachen. Betreuung: Herr Meier. Projektzeitraum: 11.09.2026 bis 16.10.2026.
+
+## Update Design und Sicherheit vom 02.10.2026
+
+1. Vorhandene Datenbank sichern. In einer Testumgebung beginnen.
+2. Vor dem Austausch des PHP-Codes `sql/update_security.sql` importieren. Es legt die Tabelle für die Login-Begrenzung an. Ein erneuter Import löscht keine Daten.
+3. Projektdateien einschließlich `.htaccess` aktualisieren. Die eigene `config/database.php` beibehalten.
+4. Bei Apache `AllowOverride` und die Module `mod_rewrite`, `mod_expires` sowie `mod_deflate` passend aktivieren. Für andere Webserver gleichwertige Regeln einrichten: kein direkter HTTP-Zugriff auf config, includes, sql, tests und versteckte Dateien. Der PHP-Entwicklungsserver wertet .htaccess nicht aus und ist nur für lokale Tests geeignet.
+5. `FITFUERINFO_PUBLIC_URL` auf den tatsächlichen Ursprung ohne abschließenden Pfad setzen, beispielsweise `https://kurse.example.org`. Ohne diese Einstellung werden relative Aktivierungslinks ausgegeben; der Host-Header wird nicht vertraut.
+6. Optional `FITFUERINFO_SESSION_PATH` auf ein beschreibbares, nicht öffentliches Sitzungsverzeichnis setzen. HTTPS verwenden und Proxy-TLS korrekt konfigurieren; Secure-Cookies werden bei vom Server erkanntem HTTPS gesetzt.
+7. Alle Nutzer erneut anmelden. Alte Sitzungen werden durch die neue Passwortbindung ungültig. Bestehende kurze Passwörter bleiben anmeldbar und sollten gezielt neu vergeben werden.
+
+- [Änderungen, Testergebnisse und weitere Vorschläge](docs/Optimierungsbericht.md)
+- [Ursprüngliche Projektdokumentation als PDF, vor der Überarbeitung](docs/FitFuerInfo_Projektdokumentation.pdf)
+- Lokale Funktionsprüfungen: `php tests/functions_test.php`.
+
+Die Schreibsperre setzt MySQL/MariaDB und nichtpersistente PDO-Verbindungen voraus. Alle schreibenden HTTP-Anfragen werden pro Datenbank serialisiert; nach fünf Sekunden Wartezeit folgt eine kontrollierte 503-Antwort. Für hohe Parallelität ist eine feinere Sperrstrategie vorzusehen. Externe SQL-Schreibzugriffe müssen dieselbe fachliche Konsistenz gewährleisten.

@@ -15,10 +15,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Die Anfrage konnte nicht bestätigt werden. Bitte das Formular erneut absenden.';
     } else {
         $username = postValue('username', '');
-        $password = isset($_POST['password']) ? $_POST['password'] : '';
+        $password = isset($_POST['password']) && is_string($_POST['password']) ? $_POST['password'] : '';
 
         if ($username === '' || $password === '') {
             $error = 'Bitte Benutzername und Passwort eingeben.';
+        } elseif (loginRateLimited($pdo, $username)) {
+            http_response_code(429);
+            header('Retry-After: 900');
+            $error = 'Zu viele Anmeldeversuche. Bitte versuchen Sie es später erneut.';
         } else {
             $stmt = $pdo->prepare(
                 'SELECT user_id, username, password_hash, role, active
@@ -36,14 +40,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 && password_verify($password, $user['password_hash'])
             ) {
                 session_regenerate_id(true);
+                unset($_SESSION['csrf_token']);
 
                 $_SESSION['user_id'] = (int) $user['user_id'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['role'] = $user['role'];
+                $_SESSION['auth_stamp'] = hash('sha256', $user['password_hash']);
+                $_SESSION['created_at'] = time();
+                $_SESSION['last_seen'] = time();
 
                 redirect('/dashboard.php');
             }
 
+            recordLoginFailure($pdo, $username);
             $error = 'Benutzername oder Passwort ist nicht korrekt.';
         }
     }
@@ -56,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Anmeldung | FitFuerInfo</title>
-    <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/css/style.css?v=20261002-2">
 </head>
 <body class="auth-body">
     <div class="auth-card">

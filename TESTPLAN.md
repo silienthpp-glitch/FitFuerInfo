@@ -47,7 +47,7 @@ Empfohlene Testdaten:
 1. Als Admin einen Mitarbeiter **ohne Passwortfeld** anlegen.
 2. Den einmal angezeigten Aktivierungslink notieren.
 3. Abmelden und `set_password.php` mit diesem Code öffnen.
-4. Ein gültiges Passwort setzen (mind. 4 Zeichen, Kleinbuchstabe, Zahl).
+4. Ein gültiges Passwort setzen (mind. 12 Zeichen, höchstens 72 Bytes, Kleinbuchstabe, Zahl).
 5. **Erwartung:** Login mit diesem Passwort funktioniert. Derselbe Code ist danach ungültig.
 
 ### Admin kennt kein Mitarbeiterpasswort

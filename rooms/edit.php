@@ -69,13 +69,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     replaceRoomEditors($pdo, $roomId, $selectedEditors);
                 }
 
+                validateFutureBookings($pdo, 'room_id', $roomId);
                 $pdo->commit();
                 setFlash('success', 'Der Raum wurde gespeichert.');
                 redirect('/rooms/index.php');
-            } catch (PDOException $e) {
+            } catch (Exception $e) {
                 $pdo->rollBack();
                 error_log('Raum speichern fehlgeschlagen: ' . $e->getMessage());
-                $error = 'Der Raum konnte nicht gespeichert werden. Möglicherweise existiert der Name bereits.';
+                $error = $e instanceof PDOException ? 'Der Raum konnte nicht gespeichert werden. Möglicherweise existiert der Name bereits.' : $e->getMessage();
             }
         }
     }

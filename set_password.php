@@ -16,8 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!$tokenRecord) {
         $error = 'Der Aktivierungscode ist ungültig oder bereits verwendet.';
     } else {
-        $password = isset($_POST['password']) ? $_POST['password'] : '';
-        $passwordRepeat = isset($_POST['password_repeat']) ? $_POST['password_repeat'] : '';
+        $password = isset($_POST['password']) && is_string($_POST['password']) ? $_POST['password'] : '';
+        $passwordRepeat = isset($_POST['password_repeat']) && is_string($_POST['password_repeat']) ? $_POST['password_repeat'] : '';
         $passwordError = validatePassword($password);
 
         if ($passwordError !== '') {
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Passwort festlegen | FitFuerInfo</title>
-    <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/css/style.css?v=20261002-2">
 </head>
 <body class="auth-body">
     <div class="auth-card">
@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php elseif ($tokenRecord): ?>
             <p class="hint">
                 Konto: <strong><?php echo e($tokenRecord['username']); ?></strong><br>
-                Das Passwort muss mindestens 4 Zeichen lang sein und mindestens einen Kleinbuchstaben sowie eine Zahl enthalten.
+                Das Passwort muss mindestens 12 Zeichen lang (höchstens 72 Bytes) sein und mindestens einen Kleinbuchstaben sowie eine Zahl enthalten.
             </p>
 
             <form method="post" action="<?php echo e(BASE_URL); ?>/set_password.php">

@@ -32,16 +32,22 @@ function getFlash($type)
     return $message;
 }
 
+function secureToken()
+{
+    if (function_exists('random_bytes')) {
+        return bin2hex(random_bytes(32));
+    }
+    if (function_exists('openssl_random_pseudo_bytes')) {
+        $strong = false;
+        $bytes = openssl_random_pseudo_bytes(32, $strong);
+        if ($bytes !== false && $strong) { return bin2hex($bytes); }
+    }
+    throw new RuntimeException('Sichere Zufallswerte sind nicht verfügbar.');
+}
+
 function csrfToken()
 {
-    if (empty($_SESSION['csrf_token'])) {
-        if (function_exists('openssl_random_pseudo_bytes')) {
-            $_SESSION['csrf_token'] = bin2hex(openssl_random_pseudo_bytes(32));
-        } else {
-            $_SESSION['csrf_token'] = sha1(uniqid((string) mt_rand(), true));
-        }
-    }
-
+    if (empty($_SESSION['csrf_token'])) { $_SESSION['csrf_token'] = secureToken(); }
     return $_SESSION['csrf_token'];
 }
 
@@ -52,7 +58,7 @@ function csrfField()
 
 function isValidCsrf()
 {
-    $token = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
+    $token = isset($_POST['csrf_token']) && is_string($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
     $sessionToken = isset($_SESSION['csrf_token']) ? $_SESSION['csrf_token'] : '';
 
     return $token !== ''
@@ -82,12 +88,12 @@ function postValue($key, $default)
         return trim($_POST[$key]);
     }
 
-    return $_POST[$key];
+    return $default;
 }
 
 function postInt($key)
 {
-    return isset($_POST[$key]) ? (int) $_POST[$key] : 0;
+    return isset($_POST[$key]) && is_scalar($_POST[$key]) ? (int) $_POST[$key] : 0;
 }
 
 function postIntArray($key)
@@ -99,6 +105,7 @@ function postIntArray($key)
     $ids = array();
 
     foreach ($_POST[$key] as $value) {
+        if (!is_scalar($value)) { continue; }
         $id = (int) $value;
         if ($id > 0 && !in_array($id, $ids, true)) {
             $ids[] = $id;
@@ -118,12 +125,12 @@ function getValue($key, $default)
         return trim($_GET[$key]);
     }
 
-    return $_GET[$key];
+    return $default;
 }
 
 function getInt($key)
 {
-    return isset($_GET[$key]) ? (int) $_GET[$key] : 0;
+    return isset($_GET[$key]) && is_scalar($_GET[$key]) ? (int) $_GET[$key] : 0;
 }
 
 function isLoggedIn()
@@ -150,7 +157,7 @@ function requireLogin()
     global $pdo;
 
     $stmt = $pdo->prepare(
-        'SELECT active
+        'SELECT active, role, username, password_hash
          FROM users
          WHERE user_id = ?
          LIMIT 1'
@@ -158,13 +165,15 @@ function requireLogin()
     $stmt->execute(array(currentUserId()));
     $user = $stmt->fetch();
 
-    if (!$user || (int) $user['active'] !== 1) {
+    if (!$user || (int) $user['active'] !== 1 || !isset($_SESSION['auth_stamp']) || !hash_equals(hash('sha256', (string) $user['password_hash']), $_SESSION['auth_stamp'])) {
         $_SESSION = array();
         if (session_id() !== '') {
             session_destroy();
         }
         redirect('/login.php');
     }
+    $_SESSION['role'] = $user['role'];
+    $_SESSION['username'] = $user['username'];
 }
 
 function requireAdmin()
@@ -188,8 +197,8 @@ function charLength($value)
 
 function validatePassword($password)
 {
-    if (charLength($password) < 4) {
-        return 'Das Passwort muss mindestens vier Zeichen lang sein.';
+    if (!is_string($password) || charLength($password) < 12 || strlen($password) > 72) {
+        return 'Das Passwort muss mindestens 12 Zeichen lang sein und darf höchstens 72 Bytes umfassen.';
     }
 
     if (!preg_match('/[a-z]/', $password)) {
@@ -205,11 +214,7 @@ function validatePassword($password)
 
 function generateActivationToken()
 {
-    if (function_exists('openssl_random_pseudo_bytes')) {
-        return bin2hex(openssl_random_pseudo_bytes(32));
-    }
-
-    return sha1(uniqid((string) mt_rand(), true) . microtime(true));
+    return secureToken();
 }
 
 function hashActivationToken($token)
@@ -261,6 +266,7 @@ function findValidPasswordToken($pdo, $token)
          WHERE t.token_hash = ?
            AND t.used_at IS NULL
            AND t.expires_at > NOW()
+           AND u.active = 1
          LIMIT 1'
     );
     $stmt->execute(array(hashActivationToken($token)));
@@ -315,50 +321,38 @@ function activationUrl($token)
 
 function absoluteUrl($path)
 {
-    $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
-    $scheme = $https ? 'https' : 'http';
-    $host = 'localhost';
-    if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] !== '') {
-        $host = $_SERVER['HTTP_HOST'];
+    // A configured origin prevents activation-link poisoning through Host headers.
+    $origin = getenv('FITFUERINFO_PUBLIC_URL');
+    if ($origin && preg_match('~^https?://[a-z0-9.-]+(?::[0-9]+)?$~i', $origin)) {
+        return rtrim($origin, '/') . $path;
     }
-
-    return $scheme . '://' . $host . $path;
+    return $path;
 }
 
 function canEditCourse($pdo, $courseId)
 {
-    if (isAdmin()) {
-        return true;
+    if (isAdmin()) { return true; }
+    static $allowed = array();
+    $key = spl_object_hash($pdo) . ':' . currentUserId();
+    if (!isset($allowed[$key])) {
+        $stmt = $pdo->prepare('SELECT course_id FROM course_owners WHERE user_id = ?');
+        $stmt->execute(array(currentUserId()));
+        $allowed[$key] = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
     }
-
-    $stmt = $pdo->prepare(
-        'SELECT 1
-         FROM course_owners
-         WHERE course_id = ?
-           AND user_id = ?
-         LIMIT 1'
-    );
-    $stmt->execute(array($courseId, currentUserId()));
-
-    return (bool) $stmt->fetch();
+    return in_array((int) $courseId, $allowed[$key], true);
 }
 
 function canEditRoom($pdo, $roomId)
 {
-    if (isAdmin()) {
-        return true;
+    if (isAdmin()) { return true; }
+    static $allowed = array();
+    $key = spl_object_hash($pdo) . ':' . currentUserId();
+    if (!isset($allowed[$key])) {
+        $stmt = $pdo->prepare('SELECT room_id FROM room_editors WHERE user_id = ?');
+        $stmt->execute(array(currentUserId()));
+        $allowed[$key] = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
     }
-
-    $stmt = $pdo->prepare(
-        'SELECT 1
-         FROM room_editors
-         WHERE room_id = ?
-           AND user_id = ?
-         LIMIT 1'
-    );
-    $stmt->execute(array($roomId, currentUserId()));
-
-    return (bool) $stmt->fetch();
+    return in_array((int) $roomId, $allowed[$key], true);
 }
 
 function canDeleteBooking($booking)
@@ -594,7 +588,7 @@ function roleLabel($role)
     return 'Mitarbeiter';
 }
 
-function validateBooking($pdo, $roomId, $courseId, $date, $startTime, $endTime)
+function validateBooking($pdo, $roomId, $courseId, $date, $startTime, $endTime, $ignoreBookingId = 0)
 {
     $errors = array();
 
@@ -690,13 +684,48 @@ function validateBooking($pdo, $roomId, $courseId, $date, $startTime, $endTime)
            AND booking_date = ?
            AND start_time < ?
            AND end_time > ?
+           AND booking_id <> ?
          LIMIT 1'
     );
-    $stmt->execute(array($roomId, $date, $endTime, $startTime));
+    $stmt->execute(array($roomId, $date, $endTime, $startTime, $ignoreBookingId));
 
     if ($stmt->fetch()) {
         $errors[] = 'Der Raum ist zu diesem Zeitpunkt bereits gebucht.';
     }
 
     return $errors;
+}
+
+function validateFutureBookings($pdo, $column, $id)
+{
+    if (!in_array($column, array('course_id', 'room_id'), true)) { throw new InvalidArgumentException(); }
+    $stmt = $pdo->prepare('SELECT * FROM bookings WHERE ' . $column . ' = ? AND (booking_date > CURDATE() OR (booking_date = CURDATE() AND end_time > CURTIME()))');
+    $stmt->execute(array($id));
+    foreach ($stmt->fetchAll() as $b) {
+        $errors = validateBooking($pdo, $b['room_id'], $b['course_id'], $b['booking_date'], $b['start_time'], $b['end_time'], $b['booking_id']);
+        if ($errors) { throw new RuntimeException('Bestehende Buchung am ' . formatDateDe($b['booking_date']) . ': ' . implode(' ', $errors)); }
+    }
+}
+
+function loginRateKeys($username)
+{
+    $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown';
+    return array(hash('sha256', 'ip:' . $ip) => 40, hash('sha256', 'user:' . strtolower($username)) => 10);
+}
+
+function loginRateLimited($pdo, $username)
+{
+    $stmt = $pdo->prepare('SELECT attempts FROM login_attempts WHERE bucket = ? AND expires_at > NOW()');
+    foreach (loginRateKeys($username) as $key => $limit) {
+        $stmt->execute(array($key));
+        if ((int) $stmt->fetchColumn() >= $limit) { return true; }
+    }
+    return false;
+}
+
+function recordLoginFailure($pdo, $username)
+{
+    $pdo->exec('DELETE FROM login_attempts WHERE expires_at <= NOW()');
+    $stmt = $pdo->prepare('INSERT INTO login_attempts (bucket, attempts, expires_at) VALUES (?, 1, DATE_ADD(NOW(), INTERVAL 15 MINUTE)) ON DUPLICATE KEY UPDATE attempts = attempts + 1');
+    foreach (loginRateKeys($username) as $key => $limit) { $stmt->execute(array($key)); }
 }

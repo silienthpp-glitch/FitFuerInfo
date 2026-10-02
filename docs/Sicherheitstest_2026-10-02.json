@@ -1,0 +1,113 @@
+{
+  "environment": "Isolierte lokale Vorschau, PHP 8.2.12, MariaDB 10.4.32",
+  "checks": [
+    {
+      "test": "Anmeldung fuer geschuetzte Seite erforderlich",
+      "passed": true
+    },
+    {
+      "test": "Sicherheitsheader",
+      "passed": true
+    },
+    {
+      "test": "Sessioncookie HttpOnly und SameSite",
+      "passed": true
+    },
+    {
+      "test": "Sensible HTML Seiten ohne Cache",
+      "passed": true
+    },
+    {
+      "test": "Ersteinrichtung gesperrt",
+      "passed": true
+    },
+    {
+      "test": "CSRF Array kontrolliert abgelehnt",
+      "passed": true
+    },
+    {
+      "test": "Admin Login erfolgreich",
+      "passed": true
+    },
+    {
+      "test": "Logout ueber GET gesperrt",
+      "passed": true
+    },
+    {
+      "test": "Logout ohne CSRF abgelehnt",
+      "passed": true
+    },
+    {
+      "test": "Seite /courses/index.php",
+      "passed": true
+    },
+    {
+      "test": "Seite /rooms/index.php",
+      "passed": true
+    },
+    {
+      "test": "Seite /bookings/index.php",
+      "passed": true
+    },
+    {
+      "test": "Seite /users/index.php",
+      "passed": true
+    },
+    {
+      "test": "Seite /software/index.php",
+      "passed": true
+    },
+    {
+      "test": "Seite /courses/create.php",
+      "passed": true
+    },
+    {
+      "test": "Seite /rooms/create.php",
+      "passed": true
+    },
+    {
+      "test": "Mitarbeiter Login",
+      "passed": true
+    },
+    {
+      "test": "Adminbereich fuer Mitarbeiter gesperrt",
+      "passed": true
+    },
+    {
+      "test": "Rollenwechsel wirkt ohne Neuanmeldung",
+      "passed": true
+    },
+    {
+      "test": "Parallele Buchungen genau einmal gespeichert",
+      "passed": true
+    },
+    {
+      "test": "Raumverkleinerung mit bestehender Buchung abgelehnt",
+      "passed": true
+    },
+    {
+      "test": "Kursvergroesserung mit bestehender Buchung abgelehnt",
+      "passed": true
+    },
+    {
+      "test": "Aktivierungscode parallel nur einmal verwendbar",
+      "passed": true
+    },
+    {
+      "test": "Passwortwechsel beendet bestehende Sitzung",
+      "passed": true
+    },
+    {
+      "test": "Elfter Fehlversuch wird begrenzt",
+      "passed": true
+    },
+    {
+      "test": "Berechtigungen fuer 200 Pruefungen nur zwei SELECTs",
+      "passed": true
+    },
+    {
+      "test": "Logout mit CSRF erfolgreich",
+      "passed": true
+    }
+  ]
+}

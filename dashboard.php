@@ -12,20 +12,16 @@ $userCount = 0;
 $upcomingBookings = array();
 
 try {
-    $courseCount = (int) $pdo->query('SELECT COUNT(*) FROM courses')->fetchColumn();
-    $roomCount = (int) $pdo->query('SELECT COUNT(*) FROM rooms')->fetchColumn();
-    $upcomingCount = (int) $pdo->query(
-        "SELECT COUNT(*)
-         FROM bookings
-         WHERE booking_date > CURDATE()
-            OR (booking_date = CURDATE() AND end_time >= CURTIME())"
-    )->fetchColumn();
-
-    if (isAdmin()) {
-        $userCount = (int) $pdo->query(
-            "SELECT COUNT(*) FROM users WHERE role = 'employee'"
-        )->fetchColumn();
-    }
+    // Fetch the four independent counters in a single database round trip.
+    $counts = $pdo->query("SELECT
+        (SELECT COUNT(*) FROM courses) AS courses,
+        (SELECT COUNT(*) FROM rooms) AS rooms,
+        (SELECT COUNT(*) FROM bookings WHERE booking_date > CURDATE() OR (booking_date = CURDATE() AND end_time >= CURTIME())) AS bookings,
+        (SELECT COUNT(*) FROM users WHERE role = 'employee') AS employees")->fetch();
+    $courseCount = (int) $counts['courses'];
+    $roomCount = (int) $counts['rooms'];
+    $upcomingCount = (int) $counts['bookings'];
+    $userCount = isAdmin() ? (int) $counts['employees'] : 0;
 
     $stmt = $pdo->query(
         "SELECT

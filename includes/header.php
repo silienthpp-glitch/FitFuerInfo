@@ -30,16 +30,17 @@ if (isAdmin()) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo e($pageTitle); ?> | FitFuerInfo</title>
-    <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/css/style.css?v=20261002-2">
 </head>
 <body>
+    <a class="skip-link" href="#main">Zum Inhalt</a>
     <header class="site-header">
         <div class="header-inner">
             <div class="brand">
                 <a href="<?php echo e(BASE_URL); ?>/dashboard.php">FitFuerInfo</a>
                 <span>Raum- und Kursverwaltung</span>
             </div>
-            <nav class="site-nav">
+            <nav class="site-nav" aria-label="Hauptnavigation">
                 <?php foreach ($navItems as $navKey => $navItem): ?>
                     <a
                         href="<?php echo e(BASE_URL . $navItem['url']); ?>"
@@ -48,12 +49,15 @@ if (isAdmin()) {
                         <?php echo e($navItem['label']); ?>
                     </a>
                 <?php endforeach; ?>
-                <a href="<?php echo e(BASE_URL); ?>/logout.php">Abmelden</a>
+                <form method="post" action="<?php echo e(BASE_URL); ?>/logout.php" class="nav-logout">
+                    <?php echo csrfField(); ?>
+                    <button type="submit">Abmelden</button>
+                </form>
             </nav>
         </div>
     </header>
 
-    <main class="page">
+    <main class="page" id="main">
         <div class="container">
             <?php if ($flashSuccess !== ''): ?>
                 <div class="alert alert-success"><?php echo e($flashSuccess); ?></div>

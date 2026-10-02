@@ -2,6 +2,11 @@
 
 require_once dirname(__FILE__) . '/includes/init.php';
 
+if (getenv('FITFUERINFO_ALLOW_SETUP') !== '1' || !in_array(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '', array('127.0.0.1', '::1'), true)) {
+    http_response_code(403);
+    exit('Die Ersteinrichtung ist deaktiviert.');
+}
+
 $message = '';
 $error = '';
 $adminExists = false;
@@ -34,7 +39,7 @@ if ($adminExists) {
         $username = postValue('username', '');
         $firstName = postValue('first_name', '');
         $lastName = postValue('last_name', '');
-        $password = isset($_POST['password']) ? $_POST['password'] : '';
+        $password = isset($_POST['password']) && is_string($_POST['password']) ? $_POST['password'] : '';
 
         $passwordError = validatePassword($password);
 
@@ -72,7 +77,7 @@ if ($adminExists) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Einrichtung | FitFuerInfo</title>
-    <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/css/style.css?v=20261002-2">
 </head>
 <body class="auth-body">
     <div class="auth-card">
@@ -89,7 +94,7 @@ if ($adminExists) {
             <p><a class="btn btn-primary" href="<?php echo e(BASE_URL); ?>/login.php">Zum Login</a></p>
         <?php elseif (!$adminExists && strpos($error, 'Datenbank') === false): ?>
             <p class="hint">
-                Das Passwort muss mindestens 4 Zeichen lang sein und
+                Das Passwort muss mindestens 12 Zeichen lang (höchstens 72 Bytes) sein und
                 mindestens einen Kleinbuchstaben sowie eine Zahl enthalten.
             </p>
 

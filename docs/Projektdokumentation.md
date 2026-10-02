@@ -1,3 +1,5 @@
+> Historischer Stand vor der Design- und Sicherheitsüberarbeitung. Aktuelle Änderungen und Nachweise: [Optimierungsbericht](Optimierungsbericht.md).
+
 # FitFuerInfo
 ## Projektdokumentation zur Kurs und Raumverwaltung
 

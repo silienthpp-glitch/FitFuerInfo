@@ -78,13 +78,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     replaceCourseOwners($pdo, $courseId, $selectedOwners);
                 }
 
+                validateFutureBookings($pdo, 'course_id', $courseId);
                 $pdo->commit();
                 setFlash('success', 'Der Kurs wurde gespeichert.');
                 redirect('/courses/index.php');
-            } catch (PDOException $e) {
+            } catch (Exception $e) {
                 $pdo->rollBack();
                 error_log('Kurs speichern fehlgeschlagen: ' . $e->getMessage());
-                $error = 'Der Kurs konnte nicht gespeichert werden.';
+                $error = $e instanceof PDOException ? 'Der Kurs konnte nicht gespeichert werden.' : $e->getMessage();
             }
         }
     }

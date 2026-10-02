@@ -2,6 +2,9 @@
 
 require_once dirname(__FILE__) . '/includes/init.php';
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); header('Allow: POST'); exit('Abmelden ist nur über das Formular möglich.'); }
+verifyCsrf('/dashboard.php');
+
 $_SESSION = array();
 
 if (ini_get('session.use_cookies')) {
