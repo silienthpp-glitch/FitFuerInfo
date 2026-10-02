@@ -1,0 +1,10 @@
+# Lokale Datenbankkonfiguration
+config/database.php
+
+# Betriebssystem
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
